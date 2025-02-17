@@ -1,0 +1,5 @@
+<form action="{% url 'payment:initiate' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="order_id" value="{{ order.id }}">
+    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition">Proceed to Checkout</button>
+</form>
