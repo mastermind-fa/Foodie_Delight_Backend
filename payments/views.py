@@ -11,6 +11,7 @@ from django.shortcuts import redirect
 from customers.models import Customer
 from django.contrib.auth.models import User
 from django.shortcuts import render	
+from django.shortcuts import get_object_or_404
 
 class PaymentViewSet(viewsets.ViewSet):
 
@@ -42,11 +43,6 @@ class PaymentViewSet(viewsets.ViewSet):
         # payment_type = request.data.get('payment_type', "Online Payment")
         # state = request.data.get('state', "state")
         
-        # Define callback URLs
-        success_url = request.build_absolute_uri(f'/payment/success/')
-        
-        fail_url = request.build_absolute_uri('/payment/fail/')
-        cancel_url = request.build_absolute_uri('/payment/cancel/')
         
         cart_items = CartItem.objects.filter(user=request.user)
 
@@ -74,6 +70,11 @@ class PaymentViewSet(viewsets.ViewSet):
         # Return the created order details
         serializer = OrderSerializer(order)
 
+        # Define callback URLs
+        success_url = request.build_absolute_uri(f'/payment/success/?tran_id={tran_id}&order_id={order.id}')
+        
+        fail_url = request.build_absolute_uri('/payment/fail/')
+        cancel_url = request.build_absolute_uri('/payment/cancel/')
         # Create payment information payload
         post_body = {
             'total_amount': total_price,
@@ -116,15 +117,15 @@ class PaymentViewSet(viewsets.ViewSet):
     def success(self, request):
         try:
             # Extract parameters
-            # customer = request.query_params.get('cus_user')
-            # order_id = request.query_params.get('order_id')
+            
+            order_id = request.query_params.get('order_id')
             # print(f'customer: {customer} order: {order_id}')
-            # order = Order.objects.filter(customer=customer, id=order_id).first()
-            # if not order:
-            #     return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            order = get_object_or_404(Order, id=order_id)
+            if not order:
+                return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # order.status = "Paid"  # Update order status
-            # order.save()
+            order.status = "Paid"  # Update order status
+            order.save()
             return redirect('https://foodie-delight-frontend.vercel.app/order.html')
 
         except User.DoesNotExist:
@@ -134,8 +135,24 @@ class PaymentViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def cancel(self, request):
+        order_id = request.query_params.get('order_id')
+            # print(f'customer: {customer} order: {order_id}')
+        order = get_object_or_404(Order, id=order_id)
+        if not order:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        order.status = "Cancelled"  # Update order status
+        order.save()
         return render(request, 'payments/cancel.html')
     
     @action(detail=False, methods=['post'])
     def fail(self, request):
+        order_id = request.query_params.get('order_id')
+            # print(f'customer: {customer} order: {order_id}')
+        order = get_object_or_404(Order, id=order_id)
+        if not order:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        order.status = "Cancelled"  # Update order status
+        order.save()
         return render(request, 'payments/fail.html')
