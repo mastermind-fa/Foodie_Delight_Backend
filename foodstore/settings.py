@@ -1,12 +1,9 @@
-import environ
-env = environ.Env()
-environ.Env.read_env()
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = 'django-insecure-(0w)q+wzo0b3!w6e@bjzzln0ufz#k(on(y3k=d#cb(^miv8ad3'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -88,11 +85,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
+        'NAME': 'postgres',
+        'USER': 'postgres.jrftcoxdraqawjmhbmcu',
+        'PASSWORD': '8g3wsnr7iZ$W2Yv',
+        'HOST': 'aws-0-ap-southeast-1.pooler.supabase.com',
+        'PORT': '6543'
     }
 }
 
@@ -137,6 +134,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+import environ
+env = environ.Env()
+environ.Env.read_env()
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -164,5 +164,3 @@ REST_FRAMEWORK = {
 
 SESSION_COOKIE_AGE = 86400  
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SUCCESS_URL = env("SUCCESS_URL")
-CANCEL_URL = env("CANCEL_URL")
