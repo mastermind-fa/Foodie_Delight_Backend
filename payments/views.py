@@ -126,7 +126,7 @@ class PaymentViewSet(viewsets.ViewSet):
 
             order.status = "Paid"  # Update order status
             order.save()
-            return redirect('https://foodie-delight-frontend.vercel.app/order.html')
+            return redirect(settings.SUCCESS_URL)
 
         except User.DoesNotExist:
             return Response({"error": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -143,7 +143,7 @@ class PaymentViewSet(viewsets.ViewSet):
 
         order.status = "Cancelled"  # Update order status
         order.save()
-        return render(request, 'payments/cancel.html')
+        return render(request, 'payments/cancel.html', {'cancel': settings.CANCEL_URL})
     
     @action(detail=False, methods=['post'])
     def fail(self, request):
@@ -155,4 +155,4 @@ class PaymentViewSet(viewsets.ViewSet):
 
         order.status = "Cancelled"  # Update order status
         order.save()
-        return render(request, 'payments/fail.html')
+        return render(request, 'payments/fail.html', {'fail': settings.CANCEL_URL})
