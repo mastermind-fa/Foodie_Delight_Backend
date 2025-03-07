@@ -36,6 +36,7 @@ class Order(models.Model):
         ("Processing", "Processing"),
         ("Delivered", "Delivered"),
         ("Cancelled", "Cancelled"),
+        ("Paid", "Paid"),
     ]
 
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")

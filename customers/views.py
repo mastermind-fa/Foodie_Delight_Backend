@@ -66,7 +66,7 @@ class ActivateAccountView(APIView):
 
 class UserLoginApiView(APIView):
     def post(self, request):
-        serializer = serializers.UserLoginSerializer(data=self.request.data)
+        serializer = serializers.UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
             password = serializer.validated_data['password']
@@ -74,21 +74,37 @@ class UserLoginApiView(APIView):
             user = authenticate(username=username, password=password)
             if user:
                 token, _ = Token.objects.get_or_create(user=user)
-                customer = Customer.objects.get(user=user)
                 login(request, user)
 
+                # Check if the user is an admin (superuser)
+                is_admin = user.is_superuser
+
+                # Check if the user is a customer
                 is_customer = hasattr(user, 'customer')
-                return Response({
+
+                # Prepare the response data
+                response_data = {
                     'token': token.key,
-                    'user_id': customer.id,
+                    'user_id': user.id,
                     'username': user.username,
                     'email': user.email,
-                    'is_customer': is_customer
-                }, status=status.HTTP_200_OK)
+                    'is_admin': is_admin,
+                    'is_customer': is_customer,
+                }
+
+                # Add customer-specific data if the user is a customer
+                if is_customer:
+                    customer = Customer.objects.get(user=user)
+                    response_data['phone'] = customer.phone
+                    response_data['address'] = customer.address
+
+                return Response(response_data, status=status.HTTP_200_OK)
             else:
                 return Response({'error': "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
- 
+    
+    
+    
 class UserLogoutView(APIView):
     def get(self, request):
         request.user.auth_token.delete()
@@ -96,21 +112,49 @@ class UserLogoutView(APIView):
         return redirect('login')
         
         
+
+
 class UserProfileView(APIView):
-    #permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
         try:
-            customer = Customer.objects.get(id=user_id)  # Fetch the customer profile
-            profile_data = {
-                "id": customer.id,
-                "user": customer.user.username,  # Username
-                "first_name": customer.user.first_name,  # First name
-                "last_name": customer.user.last_name,  # Last name
-                "phone": customer.phone,  # Phone number
-                "address": customer.address,  # Address
-            }
-            return Response(profile_data, status=status.HTTP_200_OK)
-        except Customer.DoesNotExist:
-            return Response({"detail": "Customer not found."}, status=status.HTTP_404_NOT_FOUND)
+            # Fetch the user by user_id
+            user = User.objects.get(id=user_id)
+            
+            # Check if the user is an admin (superuser)
+            if user.is_superuser:
+                profile_data = {
+                    "id": user.id,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "role": "admin",
+                }
+                return Response(profile_data, status=status.HTTP_200_OK)
+            
+            # Check if the user is a customer
+            elif hasattr(user, 'customer'):
+                customer = user.customer
+                profile_data = {
+                    "id": customer.id,
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "phone": customer.phone,
+                    "address": customer.address,
+                    "role": "customer",
+                }
+                return Response(profile_data, status=status.HTTP_200_OK)
+            
+            # If the user is neither admin nor customer
+            else:
+                return Response({"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+
     

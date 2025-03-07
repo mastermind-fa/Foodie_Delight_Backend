@@ -44,9 +44,32 @@ class FoodItemsByCategoryAPIView(APIView):
 
 class FoodItemDetailAPIView(APIView):
     def get(self, request, pk):
+        # Handle GET request (retrieve food item details)
         food_item = get_object_or_404(FoodItem, pk=pk)
         serializer = FoodItemSerializer(food_item)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        # Handle PUT request (update food item details) - Admin only
+        if not request.user.is_staff:  # Ensure only admin can update
+            return Response({'error': 'You do not have permission to perform this action'}, status=status.HTTP_403_FORBIDDEN)
+
+        food_item = get_object_or_404(FoodItem, pk=pk)
+        serializer = FoodItemSerializer(food_item, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        # Handle DELETE request (delete food item) - Admin only
+        if not request.user.is_staff:  # Ensure only admin can delete
+            return Response({'error': 'You do not have permission to perform this action'}, status=status.HTTP_403_FORBIDDEN)
+
+        food_item = get_object_or_404(FoodItem, pk=pk)
+        food_item.delete()
+        return Response({'message': 'Food item deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    
 
 # Order List and Create View
 class OrderListCreateAPIView(APIView):
@@ -200,4 +223,105 @@ class SpecialsListAPIView(APIView):
 
 
 
-#
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.shortcuts import get_object_or_404
+from .models import Category, FoodItem, Order, OrderItem, Review, CartItem
+from .serializers import CategorySerializer, FoodItemSerializer, OrderSerializer, ReviewSerializer, CartItemSerializer
+
+# Admin-only views for managing categories
+class CategoryCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CategoryDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def put(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        serializer = CategorySerializer(category, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Admin-only views for managing food items
+class FoodItemCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        serializer = FoodItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.shortcuts import get_object_or_404
+from .models import Order
+from .serializers import OrderSerializer
+from datetime import datetime
+
+# View for listing all orders
+class AllOrderAPIView(APIView):
+    # permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can access this view
+
+    def get(self, request):
+        # Retrieve all orders from all users
+        orders = Order.objects.all().order_by('-created_at')  # Sort by most recent
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# View for handling individual orders
+class OrderDetailAPIView(APIView):
+    # permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can access this view
+
+    def get(self, request, pk):
+        # Retrieve a single order by ID
+        order = get_object_or_404(Order, pk=pk)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        # Update the status or estimated_delivery_time of a specific order
+        order = get_object_or_404(Order, pk=pk)
+        new_status = request.data.get('status')
+        new_estimated_delivery_time = request.data.get('estimated_delivery_time')
+
+        # Validate and update status
+        if new_status:
+            if new_status not in dict(Order.STATUS_CHOICES).keys():
+                return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+            order.status = new_status
+
+        # Validate and update estimated_delivery_time
+        if new_estimated_delivery_time:
+            try:
+                # Parse the datetime string (e.g., "2023-10-15T14:30:00Z")
+                parsed_time = datetime.strptime(new_estimated_delivery_time, "%Y-%m-%dT%H:%M:%SZ")
+                order.estimated_delivery_time = parsed_time
+            except ValueError:
+                return Response({'error': 'Invalid datetime format. Use "YYYY-MM-DDTHH:MM:SSZ".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save the updated order
+        order.save()
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -9,7 +9,8 @@ class CategorySerializer(serializers.ModelSerializer):
 
 # Food Item Serializer
 class FoodItemSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)  # Nested serializer to show category details
+    # category = CategorySerializer(read_only=True)  # Nested serializer to show category details
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())  # Allow category ID for write operations
 
     class Meta:
         model = FoodItem
